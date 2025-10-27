@@ -2,23 +2,23 @@ import { JwtModuleOptions } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 
 export const getJwtConfig = (configService: ConfigService): JwtModuleOptions => {
-  const expiresIn = configService.get('JWT_EXPIRES_IN', '7d') || '7d';
+  const expiresIn = configService.get<string | number>('JWT_EXPIRES_IN', '7d') || '7d';
   
   return {
-    secret: configService.get('JWT_SECRET', 'your-super-secret-jwt-key'),
+    secret: configService.get<string>('JWT_SECRET', 'your-super-secret-jwt-key'),
     signOptions: {
-      expiresIn: expiresIn as string,
+      expiresIn: expiresIn,
     },
   };
 };
 
 export const getJwtRefreshConfig = (configService: ConfigService): JwtModuleOptions => {
-  const expiresIn = configService.get('JWT_REFRESH_EXPIRES_IN', '30d') || '30d';
+  const expiresIn = configService.get<string | number>('JWT_REFRESH_EXPIRES_IN', '30d') || '30d';
   
   return {
-    secret: configService.get('JWT_REFRESH_SECRET', 'your-super-secret-refresh-key'),
+    secret: configService.get<string>('JWT_REFRESH_SECRET', 'your-super-secret-refresh-key'),
     signOptions: {
-      expiresIn: expiresIn as string,
+      expiresIn: expiresIn,
     },
   };
 };
