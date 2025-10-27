@@ -51,3 +51,20 @@ coverage/
 *.lcov
 .nyc_output/
 
+# Blockchain
+blockchain/crypto-config/
+blockchain/channel-artifacts/
+blockchain/chaincode/vendor/
+
+# Empty directories
+mobile/
+contracts/
+scripts/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+*.so
+
