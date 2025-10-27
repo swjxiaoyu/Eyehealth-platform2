@@ -60,6 +60,8 @@ blockchain/chaincode/vendor/
 mobile/
 contracts/
 scripts/
+infrastructure/scripts/
+infrastructure/monitoring/
 
 # Python cache
 __pycache__/
@@ -67,4 +69,13 @@ __pycache__/
 *$py.class
 .Python
 *.so
+
+# Wallet files
+backend/wallet/
+**/*-key.json
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
 
