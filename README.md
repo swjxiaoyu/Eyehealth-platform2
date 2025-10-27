@@ -6,20 +6,16 @@
 
 ### 一键启动
 
-在Windows环境下，使用以下命令启动服务：
-
 ```bash
 # 启动开发环境（推荐）
-.\start-dev.bat
+start-dev.bat
 
 # 启动完整环境（包含AI服务）
-.\start-all.bat
+start-all.bat
 
 # 停止所有服务
-.\stop-all.bat
+stop-all.bat
 ```
-
-**注意**: 在PowerShell中需要使用 `.\` 前缀。
 
 ### 服务地址
 
@@ -41,15 +37,15 @@
 
 ```
 eyehealth-platform/
-├── frontend/               # Next.js前端应用
-├── backend/                # NestJS后端API
-├── ai-service/             # Python AI服务
-├── blockchain/             # Hyperledger Fabric配置
-├── infrastructure/         # Kubernetes部署配置
-├── docs/                   # 项目文档
-├── start-dev.bat           # 开发环境启动脚本
-├── start-all.bat           # 完整环境启动脚本
-└── stop-all.bat            # 停止所有服务
+├── frontend/          # Next.js前端应用
+├── backend/           # NestJS后端API
+├── ai-service/        # Python AI服务
+├── blockchain/         # Hyperledger Fabric配置
+├── infrastructure/     # Kubernetes部署配置
+├── docs/              # 项目文档
+├── start-dev.bat      # 开发环境启动脚本
+├── start-all.bat      # 完整环境启动脚本
+└── stop-all.bat       # 停止所有服务
 ```
 
 ## 🔧 功能特性
@@ -163,7 +159,7 @@ docker-compose -f docker-compose.dev.yml up -d
 ## 📊 监控与日志
 
 - **服务状态**: 查看各服务控制台窗口
-- **日志查看**: 各服务控制台输出
+- **日志查看**: 各服务控制台窗口
 - **性能监控**: 内置健康检查端点
 
 ## 🤝 贡献指南
