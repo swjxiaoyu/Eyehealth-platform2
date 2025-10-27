@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Build outputs
+dist/
+backend/dist/
+frontend/.next/
+frontend/out/
+
+# Environment variables
+.env
+.env.local
+backend/.env
+frontend/.env.local
+
+# Database
+*.db
+backend/*.db
+eyehealth.db
+
+# Uploads
+backend/uploads/
+frontend/public/uploads/
+
+# Python
+__pycache__/
+*.pyc
+venv/
+env/
+*.egg-info/
+.Python
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Testing
+coverage/
+*.lcov
+.nyc_output/
+

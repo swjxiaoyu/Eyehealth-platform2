@@ -1,0 +1,151 @@
+去中心化眼健康管理平台 - 技术方案文档
+版本：v1.0
+目录
+1. 总体架构概述
+2. 推荐技术栈（最终）
+3. 架构详细设计（各层）
+4. 区块链与智能合约设计要点
+5. 多模态智能体（AI）设计
+6. 存储、数据模型与接口示例（OpenAPI 风格）
+7. 安全、密钥与隐私实现细节
+8. 部署、CI/CD、监控与运维
+9. 测试计划、审计与上线流程
+10. 估算与成本建议（简要）
+11. 开发任务分解示例（可导入 issue）
+
+
+
+1. 总体架构概述（文字版）
+* 展示层：React + Next.js（Web），React Native（Mobile）
+* 接口层：API Gateway（认证、限流、审计） → REST + GraphQL
+* 服务层：微服务（NestJS/TypeScript）处理用户、报告、产品、订单、通知、审计等业务
+* AI 层：Python (FastAPI) 提供模型推理服务（多模态融合）
+* 向量检索：Milvus（相似检索/语义搜索）
+* 区块链层：Hyperledger Fabric（链码/事件/trace） - 仅写哈希与索引
+* 存储层：PostgreSQL（关系）、MinIO/S3（对象）、IPFS（不可篡改文件可选存储）
+* 运维：Kubernetes + ArgoCD + Prometheus + Grafana + ELK
+
+2. 推荐技术栈（最终 - 单一最优）
+* 前端：Next.js（TypeScript） + Tailwind + shadcn/ui
+* 移动：React Native + Expo
+* 后端：NestJS（TypeScript）微服务
+* AI：Python 3.10+ + FastAPI + PyTorch + BentoML（推理打包）
+* 向量 DB：Milvus（开源）
+* 区块链：Hyperledger Fabric（许可链）
+* 文件不可篡改存储：IPFS（pinning 服务或自建节点）
+* 存储：PostgreSQL + MinIO (S3)
+* 部署：Docker + Kubernetes + ArgoCD + Terraform + Helm
+* 密钥管理：HashiCorp Vault 或云 KMS
+* CI：GitHub Actions / GitLab CI
+
+3. 架构详细设计（分层细节）
+3.1 前端
+* Next.js 提供 SSR/SSG 增强 SEO 与首屏性能；React 组件库使用 Tailwind + shadcn/ui。
+* 功能：登录/注册、上传验光单（client-side AES 加密）、扫码展示溯源、推荐展示、订单流程、个人授权中心。
+3.2 API 层
+* API Gateway：统一鉴权（JWT / OIDC / DID 桥接）、限流、审计、统一日志。
+* 后端服务（NestJS）：模块化设计（User / Report / Product / Order / Recommendation / Trace / Auth）。
+3.3 数据层
+* PostgreSQL：用户表、报告元数据、产品表、订单表、trace 索引表。
+* MinIO(S3)：加密后的原始文件（验光单 PDF / 影像）。
+* IPFS（可选）：Pin 文件以实现去中心化证据存储（记录 CID 于链上）。
+* Milvus：存储 embedding 用于语义检索与病例相似度查询。
+3.4 区块链层（Fabric）
+* Fabric 网络由若干组织节点组成（平台、医院、厂商）--用链码把关键事件（reportHash、productTrace、orderEvent、authEvent）写入账本。
+* 链码（Chaincode）采用 Go/Java/Node（团队熟悉语言）实现，合约采用代理/升级策略与多方治理。
+3.5 AI 层
+* FastAPI 服务提供 /infer 和 /explain 接口：输入多模态数据，返回推荐产品及理由。
+* 模型部署：BentoML 或容器化模型服务，支持 GPU 节点（训练）与 CPU 节点（推理）策略。
+
+4. 区块链与智能合约设计要点
+合约模块（Chaincode）
+* ProductTraceContract：createTrace(productId, stage, documentHash, issuer, metadata)
+* ReportProofContract：writeReportHash(reportId, userDid, hash, timestamp)
+* OrderContract：orderEvent(orderId, eventType, payloadHash)（eventType: CREATED/SHIPPED/REFUND_REQUEST/REFUND_COMPLETED）
+* AuthorizationContract：grantAuth(authId, userDid, grantee, dataScope, expiry, hash)
+合约策略
+* 只写哈希：链上仅存 SHA-256 或 IPFS CID，避免暴露敏感内容。
+* 治理：链码升级需要组织签名/批准（多方治理）。
+* 退款自动化：智能合约记录退款条件与触发事件（但具体资金移动由链下支付网关完成并留链上事件作证明）。
+
+5. 多模态智能体（AI）设计
+输入数据类型
+* 文本（OCR 验光单文本 / 用户描述）
+* 影像（验光图、眼底图）
+* 语音（ASR 后文本）
+* 时间序列（可穿戴设备：亮度、眨眼、屏幕时间）
+* 用户行为日志（屏幕时间、睡眠时长、佩戴隐形眼镜等）
+模型架构（第一版建议）
+* 文本模型：Transformer 文本编码器（小型 DistilBERT）
+* 视觉模型：ResNet/ViT（轻量）提取 embedding
+* 时序模型：1D CNN 或小型 Transformer
+* 融合层：concatenate embeddings → MLP → 推荐得分 + 解释输出（模板化自然语言理由）
+训练与部署
+* 数据标注：定义标签（推荐/不推荐/禁忌）与行为因子；准备训练集（脱敏/匿名化）。
+* 评估指标：准确率、召回率、AUC、用户接受率（线上指标）。
+* 推理：BentoML 容器化 + GPU（训练）/CPU（线上推理 若成本敏感）。
+
+6. 存储、数据模型与接口示例
+6.1 主要数据表（示例）
+* users(id, did, email, name, dob, created_at)
+* reports(id, user_id, type, storage_uri, report_hash, ipfs_cid, created_at)
+* products(id, sku, name, manufacturer_id, qr_code, created_at)
+* traces(id, product_id, stage, document_hash, issuer, timestamp)
+* orders(id, user_id, status, amount, chain_event_hash, created_at)
+* recommendations(id, user_id, input_hash, result_json, model_version, created_at)
+6.2 关键 API 示例（示意 OpenAPI）
+* POST /api/v1/auth/login
+Request: { type: "email"|"wallet", payload }
+Response: { access_token, refresh_token }
+* POST /api/v1/reports/upload
+Request (multipart): file（client-side AES 加密后）; metadata
+Process: 上传 S3 → 生成 SHA-256 → 后端写 Fabric → 返回 report_id + chain_hash
+Response: { report_id, hash_on_chain, storage_uri }
+* POST /api/v1/recommendation
+Request: { user_id, context: {sleep_hours, screen_time, wearing_contacts}, top_k }
+Response: { recommendations: [{product_id, score, reason}], model_version }
+* GET /api/v1/product/trace/{product_id}
+Response: { product_id, trace: [{stage, issuer, document_hash, timestamp}], certificate_links }
+
+7. 安全、密钥与隐私实现细节
+* 客户端加密：文件上传前在客户端做 AES 对称加密，数据密钥用用户公钥（DID wallet）加密并存储（或使用 KMS 托管）。
+* 链上数据最小化：仅写入文件哈希或 CID。
+* KMS/Vault：平台密钥、合约密钥、服务账号凭证放入 Vault。
+* 授权控制：使用可撤销授权令牌（时间窗口与数据粒度）并在链上记录授权事件。
+* 审计：所有关键动作生成审计日志（链上事件 + 后端不可删改日志）。
+
+8. 部署、CI/CD、监控与运维
+CI/CD
+* 每服务独立 pipeline（测试→镜像构建→staging 部署→人工批准→生产）
+* GitHub Actions + ArgoCD（GitOps）进行 K8s 同步
+部署
+* K8s 集群（生产级：3 个 master + worker 节点）；Helm charts 管理部署
+* Fabric 网络：可在 K8s 上部署 Fabric 节点（或使用 Fabric Operator）
+监控与告警
+* Prometheus（指标）+ Grafana（仪表盘）
+* ELK / OpenSearch（日志）
+* Prometheus AlertManager + Slack / PagerDuty 集成
+
+9. 测试计划、审计与上线流程
+* 单元测试、集成测试、E2E（Playwright / Cypress）
+* 安全审计：智能合约须第三方审计（上线前）
+* 隐私合规审核：法律顾问对接目标市场法规
+* 上线流程：staging 流量验证 → 公测 → 合约冻结与审计 → 生产发布
+
+10. 估算与成本建议（简要）
+* 推荐先走 低成本 PoC 路线（自建小规模 K8s / VPS，使用开源组件）：可把初期月度云成本控制在 $50-$300/月（仅内部测试）。
+* 中期（MVP 公测）：建议预算 $1,000-$5,000/月（托管 DB、对象存储、少量 GPU/推理、IPFS pinning）。
+* 安全/审计与合规为一次性高成本，需预留 $5k-$50k+。
+（注：精确估算需基于并发、存储量、模型训练需求与目标 SLA）- 参照我们此前讨论的成本区间。
+
+11. 开发任务分解（示例，可直接转为 issue）
+* FE-001 Next.js 项目初始化 + Auth UI（DID / email）
+* FE-002 报告上传页面（client-side 加密 + S3 上传）
+* FE-003 扫码页面（展示 trace）
+* BE-001 NestJS 项目设置 + User 模块 + Auth（OIDC + DID）
+* BE-002 Report 模块（上传通知、链上写哈希）
+* BE-003 Product/Trace 模块（链交互 SDK）
+* AI-001 FastAPI 模拟推荐服务（初版规则引擎）
+* CH-001 Fabric 本地网络（docker-compose / k8s）搭建脚本
+* INFRA-001 K8s 集群脚本（Terraform + Helm） + CI/CD pipeline
+

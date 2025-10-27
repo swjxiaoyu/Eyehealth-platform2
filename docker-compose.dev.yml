@@ -1,0 +1,231 @@
+version: '3.8'
+
+services:
+  # 数据库服务
+  postgres:
+    image: postgres:15
+    container_name: eyehealth-postgres
+    environment:
+      POSTGRES_DB: eyehealth
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - eyehealth-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: eyehealth-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - eyehealth-network
+
+  # 存储服务
+  minio:
+    image: minio/minio:latest
+    container_name: eyehealth-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - eyehealth-network
+
+  # 向量数据库
+  milvus:
+    image: milvusdb/milvus:latest
+    container_name: eyehealth-milvus
+    ports:
+      - "19530:19530"
+    volumes:
+      - milvus_data:/var/lib/milvus
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+    depends_on:
+      - etcd
+    networks:
+      - eyehealth-network
+
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.5
+    container_name: eyehealth-etcd
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+      - ETCD_SNAPSHOT_COUNT=50000
+    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    volumes:
+      - etcd_data:/etcd
+    networks:
+      - eyehealth-network
+
+  # IPFS 节点
+  ipfs:
+    image: ipfs/go-ipfs:latest
+    container_name: eyehealth-ipfs
+    ports:
+      - "4001:4001"
+      - "5001:5001"
+      - "8080:8080"
+    volumes:
+      - ipfs_data:/data/ipfs
+    networks:
+      - eyehealth-network
+
+  # 区块链网络
+  fabric-peer:
+    image: hyperledger/fabric-peer:latest
+    container_name: eyehealth-fabric-peer
+    environment:
+      - CORE_PEER_ID=peer0.org1.example.com
+      - CORE_PEER_ADDRESS=peer0.org1.example.com:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.org1.example.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org1.example.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org1.example.com:7051
+      - CORE_PEER_LOCALMSPID=Org1MSP
+    ports:
+      - "7051:7051"
+    volumes:
+      - ./blockchain/crypto-config:/etc/hyperledger/fabric/crypto-config
+      - ./blockchain/config:/etc/hyperledger/fabric/config
+    networks:
+      - eyehealth-network
+
+  # 后端服务
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: eyehealth-backend
+    ports:
+      - "3001:3001"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/eyehealth
+      - REDIS_URL=redis://redis:6379
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MILVUS_HOST=milvus
+      - MILVUS_PORT=19530
+    depends_on:
+      - postgres
+      - redis
+      - minio
+      - milvus
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - eyehealth-network
+
+  # AI服务
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: eyehealth-ai-service
+    ports:
+      - "8000:8000"
+    environment:
+      - MILVUS_HOST=milvus
+      - MILVUS_PORT=19530
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+    depends_on:
+      - milvus
+    volumes:
+      - ./ai-service:/app
+      - ai_models:/app/models
+    networks:
+      - eyehealth-network
+
+  # 前端服务
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: eyehealth-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+      - NEXT_PUBLIC_AI_SERVICE_URL=http://localhost:8000
+    depends_on:
+      - backend
+      - ai-service
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - eyehealth-network
+
+  # 监控服务
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: eyehealth-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - eyehealth-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: eyehealth-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infrastructure/monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+      - ./infrastructure/monitoring/grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - eyehealth-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  milvus_data:
+  etcd_data:
+  ipfs_data:
+  ai_models:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  eyehealth-network:
+    driver: bridge
+
+
+
+
+
+
