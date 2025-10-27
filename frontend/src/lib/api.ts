@@ -128,14 +128,14 @@ export const authAPI = {
   login: async (type: 'email' | 'wallet', payload: Record<string, unknown>) => {
     if (type === 'email') {
       // 邮箱登录直接发送email和password
-      const response = await apiClient.post('/api/v1/auth/login', {
+      const response = await apiClient.post('/auth/login', {
         email: payload.email,
         password: payload.password,
       })
       return response.data
     } else {
       // 钱包登录发送到wallet-login端点
-      const response = await apiClient.post('/api/v1/auth/wallet-login', {
+      const response = await apiClient.post('/auth/wallet-login', {
         walletAddress: payload.walletAddress,
         signature: payload.signature,
         message: payload.message,
@@ -146,7 +146,7 @@ export const authAPI = {
 
   // 获取钱包签名消息
   getWalletMessage: async (walletAddress: string) => {
-    const response = await apiClient.post('/api/v1/auth/wallet-message', {
+    const response = await apiClient.post('/auth/wallet-message', {
       walletAddress,
     })
     return response.data
@@ -154,14 +154,14 @@ export const authAPI = {
 
   // 注册
   register: async (userData: RegisterUser) => {
-    const response = await apiClient.post('/api/v1/auth/register', userData)
+    const response = await apiClient.post('/auth/register', userData)
     return response.data
   },
 
   // 刷新token
   refreshToken: async () => {
     const refreshToken = localStorage.getItem('refresh_token')
-    const response = await apiClient.post('/api/v1/auth/refresh', {
+    const response = await apiClient.post('/auth/refresh', {
       refresh_token: refreshToken,
     })
     return response.data
@@ -169,7 +169,7 @@ export const authAPI = {
 
   // 登出
   logout: async () => {
-    const response = await apiClient.post('/api/v1/auth/logout')
+    const response = await apiClient.post('/auth/logout')
     return response.data
   },
 }
@@ -182,7 +182,7 @@ export const reportAPI = {
     formData.append('file', file)
     formData.append('metadata', JSON.stringify(metadata))
 
-    const response = await apiClient.post('/api/v1/reports/upload', formData, {
+    const response = await apiClient.post('/reports/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -192,19 +192,19 @@ export const reportAPI = {
 
   // 获取用户报告列表
   getUserReports: async (userId: string) => {
-    const response = await apiClient.get(`/api/v1/reports/user/${userId}`)
+    const response = await apiClient.get(`/reports/user/${userId}`)
     return response.data
   },
 
   // 获取报告详情
   getReport: async (reportId: string) => {
-    const response = await apiClient.get(`/api/v1/reports/${reportId}`)
+    const response = await apiClient.get(`/reports/${reportId}`)
     return response.data
   },
 
   // 删除报告
   deleteReport: async (reportId: string) => {
-    const response = await apiClient.delete(`/api/v1/reports/${reportId}`)
+    const response = await apiClient.delete(`/reports/${reportId}`)
     return response.data
   },
 }
@@ -213,25 +213,25 @@ export const reportAPI = {
 export const productAPI = {
   // 获取产品列表
   getProducts: async (params?: Record<string, unknown>) => {
-    const response = await apiClient.get('/api/v1/products', { params })
+    const response = await apiClient.get('/products', { params })
     return response.data
   },
 
   // 获取产品详情
   getProduct: async (productId: string) => {
-    const response = await apiClient.get(`/api/v1/products/${productId}`)
+    const response = await apiClient.get(`/products/${productId}`)
     return response.data
   },
 
   // 扫描产品二维码
   scanProduct: async (qrCode: string) => {
-    const response = await apiClient.get(`/api/v1/products/scan/${qrCode}`)
+    const response = await apiClient.get(`/products/scan/${qrCode}`)
     return response.data
   },
 
   // 获取产品溯源信息
   getProductTrace: async (productId: string) => {
-    const response = await apiClient.get(`/api/v1/product/trace/${productId}`)
+    const response = await apiClient.get(`/product/trace/${productId}`)
     return response.data
   },
 }
@@ -240,7 +240,7 @@ export const productAPI = {
 export const recommendationAPI = {
   // 获取推荐
   getRecommendations: async (userId: string, context: Record<string, unknown>, topK: number = 5) => {
-    const response = await apiClient.post('/api/v1/recommendation', {
+    const response = await apiClient.post('/recommendation', {
       user_id: userId,
       context,
       top_k: topK,
@@ -250,7 +250,7 @@ export const recommendationAPI = {
 
   // 获取推荐历史
   getRecommendationHistory: async (userId: string) => {
-    const response = await apiClient.get(`/api/v1/recommendations/user/${userId}`)
+    const response = await apiClient.get(`/recommendations/user/${userId}`)
     return response.data
   },
 }
@@ -259,25 +259,25 @@ export const recommendationAPI = {
 export const orderAPI = {
   // 创建订单
   createOrder: async (orderData: Partial<Order>) => {
-    const response = await apiClient.post('/api/v1/orders', orderData)
+    const response = await apiClient.post('/orders', orderData)
     return response.data
   },
 
   // 获取用户订单
   getUserOrders: async (userId: string) => {
-    const response = await apiClient.get(`/api/v1/orders/user/${userId}`)
+    const response = await apiClient.get(`/orders/user/${userId}`)
     return response.data
   },
 
   // 获取订单详情
   getOrder: async (orderId: string) => {
-    const response = await apiClient.get(`/api/v1/orders/${orderId}`)
+    const response = await apiClient.get(`/orders/${orderId}`)
     return response.data
   },
 
   // 更新订单状态
   updateOrderStatus: async (orderId: string, status: Order['status']) => {
-    const response = await apiClient.patch(`/api/v1/orders/${orderId}/status`, {
+    const response = await apiClient.patch(`/orders/${orderId}/status`, {
       status,
     })
     return response.data
@@ -288,19 +288,19 @@ export const orderAPI = {
 export const userAPI = {
   // 获取用户信息
   getUser: async (userId: string) => {
-    const response = await apiClient.get(`/api/v1/users/${userId}`)
+    const response = await apiClient.get(`/users/${userId}`)
     return response.data
   },
 
   // 更新用户信息
   updateUser: async (userId: string, userData: Partial<User>) => {
-    const response = await apiClient.patch(`/api/v1/users/${userId}`, userData)
+    const response = await apiClient.patch(`/users/${userId}`, userData)
     return response.data
   },
 
   // 删除用户
   deleteUser: async (userId: string) => {
-    const response = await apiClient.delete(`/api/v1/users/${userId}`)
+    const response = await apiClient.delete(`/users/${userId}`)
     return response.data
   },
 }
